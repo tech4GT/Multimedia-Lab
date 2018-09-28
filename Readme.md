@@ -1,6 +1,6 @@
-#Practical Lab Solutions for Multimedia and Applications (ITC15)
+# Practical Lab Solutions for Multimedia and Applications (ITC15)
 
-##List of problems
+## List of problems
 
 1. WAP to write and display the data in file. (File handling in C)
 2. WAP to compress and decompress the text using run length encoding technique.
