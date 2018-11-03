@@ -23,12 +23,12 @@ function encode(str, probs) {
         rangeL = numL;
         rangeH = numH;
     }
-    return rangeH;
+    return rangeL;
 }
 
 function decode(num, probs) {
     let rv = "", rangeL = 0, rangeH = 1;
-    for (let i = 0; i < (num + "").substr(2).length + 1; i++) {
+    for (let i = 0; i < (num + "").substr(2).length; i++) {
         let val = 0, j = 0;
         for (j = 0; rangeL + val * (rangeH - rangeL) < num; j++) {
             val += probs[j].val;
