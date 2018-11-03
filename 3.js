@@ -1,92 +1,124 @@
+log = console.log.bind(console);
 
+var Heap = function(fn) {
+    this.fn = fn || function(e) {
+        return e;
+    };
+    this.items = [];
+};
 
-(function main() {
-    let str = "aaabbcd", map = {}, freq = {};
-    for (let i in str)
-        map[str[i]] = map[str[i]] ? map[str[i]] + 1 : 1;
-
-    for (let i in map)
-        freq[map[i]] = i;
-    console.log(staticHuffman(str, map, freq));
-})();
-
-
-function staticHuffman(map, freq) {
-    let codes = {};
-    let h = new heap();
-    for (let i in map)
-        h.insert(map[i]);
-    while (h.arr.length != 1) {
-        let el1 = h.remove(), el2 = h.remove();
-        let val = el1 + el2;
-        if (freq[el1]) {
-            freq[codes[el1]] = freq[codes[el1]] || "";
-            freq[codes[el1]] += 0;
+Heap.prototype = {
+    swap: function(i, j) {
+        this.items[i] = [
+            this.items[j],
+            this.items[j] = this.items[i]
+        ][0];
+    },
+    bubble: function(index) {
+        var parent = ~~((index - 1) / 2);
+        if (this.item(parent) < this.item(index)) {
+            this.swap(index, parent);
+            this.bubble(parent);
         }
-        if (freq[el2]) {
-            freq[codes[el2]] = freq[codes[el2]] || "";
-            freq[codes[el2]] += 1;
+    },
+    item: function(index) {
+        return this.fn(this.items[index]);
+    },
+    pop: function() {
+        return this.items.pop();
+    },
+    sift: function(index, end) {
+        var child = index * 2 + 1;
+        if (child < end) {
+            if (child + 1 < end && this.item(child + 1) > this.item(child)) {
+                child++;
+            }
+            if (this.item(index) < this.item(child)) {
+                this.swap(index, child);
+                return this.sift(child, end);
+            }
         }
-        h.insert(val);
-    }
-    return codes;
-}
-
-
-function heap(arr) {
-
-    if (arr) {
-        build_heap();
-    } else {
-        arr = [];
-    }
-    this.arr = arr;
-
-    function build_heap() {
-        for (let i = (arr.length - 1) % 2 == 0 ? (((arr.length - 1) >> 1) - 1) : (arr.length - 1) >> 1; i >= 0; i--)
-            max_heapify(i);
-    }
-
-    function max_heapify(i) {
-        let l = (i << 1) + 1, r = l + 1, largest = i;
-        if (l < arr.length && arr[l] > arr[i])
-            largest = l;
-        if (r < arr.length && arr[r] > arr[largest])
-            largest = r
-
-        if (i != largest) {
-            let temp = arr[i];
-            arr[i] = arr[largest];
-            arr[largest] = temp;
-            max_heapify(largest);
+    },
+    push: function() {
+        var lastIndex = this.items.length;
+        for (var i = 0; i < arguments.length; i++) {
+            this.items.push(arguments[i]);
+            this.bubble(lastIndex++);
         }
+    },
+    get length() {
+        return this.items.length;
     }
+};
 
-    this.up_heapify = function up_heapify(i) {
-        let parent = (i % 2 == 0) ? (i >> 2) - 1 : (i >> 2);
-        if (this.arr[i] > this.arr[parent]) {
-            //swap
-            let temp = this.arr[i];
-            this.arr[i] = this.arr[parent];
-            this.arr[parent] = temp;
-            this.up_heapify(parent);
+var Huffman = {
+    encode: function(data) {
+        var prob = {};
+        var tree = new Heap(function(e) {
+            return e[0];
+        });
+        for (var i = 0; i < data.length; i++) {
+            if (prob.hasOwnProperty(data[i])) {
+                prob[data[i]]++;
+            } else {
+                prob[data[i]] = 1;
+            }
         }
+        Object.keys(prob).sort(function(a, b) {
+            return ~~(Math.random() * 2);
+        }).forEach(function(e) {
+            tree.push([prob[e], e]);
+        });
+        while (tree.length > 1) {
+            var first = tree.pop(),
+                second = tree.pop();
+            tree.push([first[0] + second[0], [first[1], second[1]]]);
+        }
+        var dict = {};
+        var recurse = function(root, string) {
+            if (root.constructor === Array) {
+                recurse(root[0], string + '0');
+                recurse(root[1], string + '1');
+            } else {
+                dict[root] = string;
+            }
+        };
+        tree.items = tree.pop()[1];
+        recurse(tree.items, '');
+        var result = '';
+        for (var i = 0; i < data.length; i++) {
+            result += dict[data.charAt(i)];
+        }
+        var header = Object.keys(dict).map(function(e) {
+            return e.charCodeAt(0) + '|' + dict[e];
+        }).join('-') + '/';
+        return header + result;
+    },
+    decode: function(string) {
+        string = string.split('/');
+        var data = string[1].split(''),
+            header = {};
+        string[0].split('-').forEach(function(e) {
+            var values = e.split('|');
+            header[values[1]] = String.fromCharCode(values[0]);
+        });
+        var result = '';
+        while (data.length) {
+            var i = 0,
+                cur = '';
+            while (data.length) {
+                cur += data.shift();
+                if (header.hasOwnProperty(cur)) {
+                    result += header[cur];
+                    break;
+                }
+            }
+        }
+        return result;
     }
+};
 
-    this.insert = function(el) {
-        let arr = this.arr;
-        arr.push(el);
-        this.up_heapify(arr.length - 1);
-    }
-
-    this.remove = function() {
-        let arr = this.arr;
-        if (arr.length == 1) return arr.pop();
-
-        let root = arr[0];
-        arr[0] = arr.pop();
-        this.max_heapify(0);
-        return root;
-    }
-    this.max_heapify = max_heapify;
-}
+var enc = Huffman.encode('TESTTESTTESTTESTTESTTESTTESTTEST123abc');
+log(enc);
+var dec = Huffman.decode(enc);
+log(dec);
